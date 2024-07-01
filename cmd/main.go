@@ -78,13 +78,21 @@
 
 package main
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 func main() {
 
 	wg := &sync.WaitGroup{}
 	g := Generator{}
 	g.GetTestMessages()
-	messageFromOutSide := g.SendMessage(wg)
+	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
+	for mes := range messageFromOutSide {
+
+		fmt.Println(mes.Data)
+
+	}
 
 }

@@ -1,9 +1,13 @@
+// 1. **Каналы для записи сообщений**: Несколько пользователей передают изменения для записи в файлы через каналы.
+// 1.1 Пользователей можно сэмулировать обычным циклом
+
 package main
 
 import (
-	. "asssement1/entities"
 	"sync"
 	"time"
+
+	. "asssement1/entities"
 )
 
 var stack = []Message{
@@ -38,7 +42,7 @@ func (g *Generator) SendMessage(wg *sync.WaitGroup) chan Message {
 			wg.Add(1)
 			go func(m Message) {
 				defer wg.Done()
-				time.Sleep(time.Millisecond * 1000)
+				time.Sleep(time.Millisecond * 100)
 				out <- m
 			}(message)
 		}
