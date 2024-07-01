@@ -7,26 +7,26 @@ import (
 	"sync"
 	"time"
 
-	. "asssement1/entities"
+	. "asssement1.ru/entities"
 )
 
 var stack = []Message{
-	Message{Token: "111", FileID: "file_01", Data: "Payload 1 From user with token 111"},
-	Message{Token: "111", FileID: "file_02", Data: "Payload 2 From user with token 111"},
-	Message{Token: "111", FileID: "file_03", Data: "Payload 3 From user with token 111"},
-	Message{Token: "111", FileID: "file_04", Data: "Payload 4 From user with token 111"},
-	Message{Token: "222", FileID: "file_01", Data: "Payload 1 From user with token 222"},
-	Message{Token: "222", FileID: "file_02", Data: "Payload 2 From user with token 222"},
-	Message{Token: "222", FileID: "file_03", Data: "Payload 3 From user with token 222"},
-	Message{Token: "222", FileID: "file_04", Data: "Payload 4 From user with token 222"},
-	Message{Token: "333", FileID: "file_01", Data: "Payload 1 From user with token 333"},
-	Message{Token: "333", FileID: "file_02", Data: "Payload 2 From user with token 333"},
-	Message{Token: "333", FileID: "file_03", Data: "Payload 3 From user with token 333"},
-	Message{Token: "333", FileID: "file_04", Data: "Payload 4 From user with token 333"},
-	Message{Token: "444", FileID: "file_01", Data: "Payload 1 From user with token 444"},
-	Message{Token: "444", FileID: "file_02", Data: "Payload 2 From user with token 444"},
-	Message{Token: "444", FileID: "file_03", Data: "Payload 3 From user with token 444"},
-	Message{Token: "444", FileID: "file_04", Data: "Payload 4 From user with token 444"},
+	{Token: "111", FileID: "file_01", Data: "Payload 1 From user with token 111"},
+	{Token: "111", FileID: "file_02", Data: "Payload 2 From user with token 111"},
+	{Token: "111", FileID: "file_03", Data: "Payload 3 From user with token 111"},
+	{Token: "111", FileID: "file_04", Data: "Payload 4 From user with token 111"},
+	{Token: "222", FileID: "file_01", Data: "Payload 1 From user with token 222"},
+	{Token: "222", FileID: "file_02", Data: "Payload 2 From user with token 222"},
+	{Token: "222", FileID: "file_03", Data: "Payload 3 From user with token 222"},
+	{Token: "222", FileID: "file_04", Data: "Payload 4 From user with token 222"},
+	{Token: "333", FileID: "file_01", Data: "Payload 1 From user with token 333"},
+	{Token: "333", FileID: "file_02", Data: "Payload 2 From user with token 333"},
+	{Token: "333", FileID: "file_03", Data: "Payload 3 From user with token 333"},
+	{Token: "333", FileID: "file_04", Data: "Payload 4 From user with token 333"},
+	{Token: "444", FileID: "file_01", Data: "Payload 1 From user with token 444"},
+	{Token: "444", FileID: "file_02", Data: "Payload 2 From user with token 444"},
+	{Token: "444", FileID: "file_03", Data: "Payload 3 From user with token 444"},
+	{Token: "444", FileID: "file_04", Data: "Payload 4 From user with token 444"},
 }
 
 type Generator struct {

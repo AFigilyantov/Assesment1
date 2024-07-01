@@ -1,3 +1,3 @@
-module asssement1
+module asssement1.ru
 
 go 1.22.1

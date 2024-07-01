@@ -81,18 +81,53 @@ package main
 import (
 	"fmt"
 	"sync"
+
+	. "asssement1.ru/entities"
 )
 
 func main() {
 
+	var whiteList = NewUsers()
+	whiteList.AddNewUser("111")
+	whiteList.AddNewUser("222")
+	whiteList.AddNewUser("333")
+	whiteList.AddNewUser("444")
+	fileCashe := make(map[FileID][]string)
 	wg := &sync.WaitGroup{}
 	g := Generator{}
 	g.GetTestMessages()
 	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
-	for mes := range messageFromOutSide {
 
-		fmt.Println(mes.Data)
+	WriteDataTo(messageFromOutSide, whiteList, fileCashe)
+
+	fmt.Println(fileCashe)
+
+}
+
+func WriteDataTo(messages <-chan Message, users *Users, fileCashe map[FileID][]string) {
+
+	for mes := range messages {
+		_, ok := users.WhiteList[mes.Token]
+		if !ok {
+			continue
+		}
+		fileCashe[FileID(mes.FileID)] = append(fileCashe[FileID(mes.FileID)], mes.Data)
 
 	}
 
 }
+
+// type Writer interface {
+// 	Write(ctx context.Context, m Message)
+// }
+
+// type MessageCacheWriting struct {
+// }
+
+// func (m *MessageCacheWriting) Write(ctx context.Context, mes Message) map[FileID][]string {
+
+// 	fileCashe := make(map[FileID][]string)
+// 	fileCashe[FileID(mes.FileID)] = append(fileCashe[FileID(mes.FileID)], mes.Data)
+// 	return maps.Clone(fileCashe)
+
+// }

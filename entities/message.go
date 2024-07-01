@@ -1,4 +1,4 @@
-package entity_test
+package entity
 
 type Message struct {
 	Token  string
