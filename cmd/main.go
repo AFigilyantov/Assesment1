@@ -88,30 +88,48 @@ import (
 func main() {
 
 	var whiteList = NewUsers()
+
 	whiteList.AddNewUser("111")
 	whiteList.AddNewUser("222")
 	whiteList.AddNewUser("333")
 	whiteList.AddNewUser("444")
-	fileCashe := make(map[FileID][]string)
+
 	wg := &sync.WaitGroup{}
+	mu := &sync.Mutex{}
 	g := Generator{}
 	g.GetTestMessages()
+	fc := NewFileCache()
+
 	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
 
-	WriteDataTo(messageFromOutSide, whiteList, fileCashe)
+	WriteDataTo(wg, mu, messageFromOutSide, whiteList, fc)
 
-	fmt.Println(fileCashe)
+	for file, data := range fc.Cache {
+		fmt.Println(file)
+		for _, d := range data {
+			fmt.Println(d)
+		}
+
+	}
+
+	wg.Wait()
 
 }
 
-func WriteDataTo(messages <-chan Message, users *Users, fileCashe map[FileID][]string) {
+func WriteDataTo(wg *sync.WaitGroup, mu *sync.Mutex, messages <-chan Message, users *Users, fc *FileCache) {
 
 	for mes := range messages {
 		_, ok := users.WhiteList[mes.Token]
 		if !ok {
 			continue
 		}
-		fileCashe[FileID(mes.FileID)] = append(fileCashe[FileID(mes.FileID)], mes.Data)
+		wg.Add(1)
+		go func(mes Message) {
+			defer wg.Done()
+			mu.Lock()
+			fc.AddNewNote(FileID(mes.FileID), mes.Data)
+			mu.Unlock()
+		}(mes)
 
 	}
 

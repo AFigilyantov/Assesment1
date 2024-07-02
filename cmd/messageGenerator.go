@@ -33,7 +33,7 @@ type Generator struct {
 	Queue []Message
 }
 
-func (g *Generator) SendMessage(wg *sync.WaitGroup) chan Message {
+func (g *Generator) SendMessage(wg *sync.WaitGroup) <-chan Message {
 	out := make(chan Message)
 	go func() {
 		defer close(out)
