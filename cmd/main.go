@@ -102,50 +102,49 @@ func main() {
 
 	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
 
-	WriteDataTo(wg, mu, messageFromOutSide, whiteList, fc)
+	fc.WriteDataTo(wg, mu, messageFromOutSide, whiteList)
 
-	for file, data := range fc.Cache {
-		fmt.Println(file)
-		for _, d := range data {
-			fmt.Println(d)
-		}
+	dataFromCache := ParseFileCache(wg, fc)
 
+	for d := range dataFromCache {
+		fmt.Println(d)
 	}
 
 	wg.Wait()
 
 }
 
-func WriteDataTo(wg *sync.WaitGroup, mu *sync.Mutex, messages <-chan Message, users *Users, fc *FileCache) {
+func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) <-chan TemporaryData {
+	out := make(chan TemporaryData)
+	go func() {
+		defer close(out)
+		defer wg.Wait()
+		for fileId, data := range fc.Cache {
+			fc.RemoveNotesBy(fileId)
+			wg.Add(1)
+			go func(fileId FileID, data []string) {
+				defer wg.Done()
+				for _, d := range data {
+					out <- TemporaryData{
+						FileID:  fileId,
+						Payload: d,
+					}
+				}
+			}(fileId, data)
 
-	for mes := range messages {
-		_, ok := users.WhiteList[mes.Token]
-		if !ok {
-			continue
 		}
-		wg.Add(1)
-		go func(mes Message) {
-			defer wg.Done()
-			mu.Lock()
-			fc.AddNewNote(FileID(mes.FileID), mes.Data)
-			mu.Unlock()
-		}(mes)
 
-	}
-
+	}()
+	return out
 }
 
-// type Writer interface {
-// 	Write(ctx context.Context, m Message)
-// }
+type Writer interface {
+	Write(fc FileCache)
+}
 
-// type MessageCacheWriting struct {
-// }
+type WriteToFile struct {
+}
 
-// func (m *MessageCacheWriting) Write(ctx context.Context, mes Message) map[FileID][]string {
+func (wtf *WriteToFile) Write(wg *sync.WaitGroup, mu *sync.RWMutex, fc FileCache) {
 
-// 	fileCashe := make(map[FileID][]string)
-// 	fileCashe[FileID(mes.FileID)] = append(fileCashe[FileID(mes.FileID)], mes.Data)
-// 	return maps.Clone(fileCashe)
-
-// }
+}
