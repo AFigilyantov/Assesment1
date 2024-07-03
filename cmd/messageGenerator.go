@@ -42,7 +42,7 @@ func (g *Generator) SendMessage(wg *sync.WaitGroup) <-chan Message {
 			wg.Add(1)
 			go func(m Message) {
 				defer wg.Done()
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Second * 3)
 				out <- m
 			}(message)
 		}

@@ -21,7 +21,7 @@ func (c *FileCache) AddNewNote(fileId FileID, note string) {
 func (fc *FileCache) WriteDataTo(wg *sync.WaitGroup, mu *sync.Mutex, messages <-chan Message, users *Users) {
 
 	for mes := range messages {
-		_, ok := users.WhiteList[mes.Token]
+		_, ok := users.WhiteList[mes.Token] // проверяем валидность токена если нет сообщение отбрасывеется
 		if !ok {
 			continue
 		}

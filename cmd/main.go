@@ -101,24 +101,23 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 	mu := &sync.Mutex{}
-	g := Generator{}
-	g.GetTestMessages()
-	fc := NewFileCache()
+	g := Generator{}     // создается генератор
+	g.GetTestMessages()  // заполняем етстовые данные
+	fc := NewFileCache() // создаем cache сообщений
 
 	// ctx, cancel := context.WithCancel(context.Background())
 	// defer cancel()
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // gracefull Shutdown
 	defer stop()
 
-	messageFromOutSide := g.SendMessage(wg)
+	messageFromOutSide := g.SendMessage(wg) // пишем в канал сообщения из генератора
 
 	fc.WriteDataTo(wg, mu, messageFromOutSide, whiteList)
 	go WriteDataFrom(ctx, wg, fc)
 
-	wg.Wait()
-
 	<-ctx.Done()
+	wg.Wait()
 
 }
 
@@ -167,7 +166,7 @@ func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) {
 			go func(fileId FileID, data []string) {
 				defer wg.Done()
 				for _, d := range data {
-					writeText(TemporaryData{FileID: fileId, Payload: d})
+					writeText(TemporaryData{FileID: fileId, Payload: d}) // хздесь можно привернуть интерфейс
 				}
 
 			}(fileId, data)
