@@ -79,8 +79,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 
 	. "asssement1.ru/entities"
 )
@@ -100,24 +105,61 @@ func main() {
 	g.GetTestMessages()
 	fc := NewFileCache()
 
-	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	messageFromOutSide := g.SendMessage(wg)
 
 	fc.WriteDataTo(wg, mu, messageFromOutSide, whiteList)
-
-	dataFromCache := ParseFileCache(wg, fc)
-
-	for d := range dataFromCache {
-		fmt.Println(d)
-	}
+	go WriteDataFrom(ctx, wg, fc)
 
 	wg.Wait()
 
+	<-ctx.Done()
+
 }
 
-func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) <-chan TemporaryData {
-	out := make(chan TemporaryData)
+func WriteDataFrom(ctx context.Context, wg *sync.WaitGroup, fc *FileCache) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			ParseFileCache(wg, fc)
+		case <-ctx.Done():
+			fmt.Println("INTERRUPTED")
+			return
+
+		}
+	}
+}
+
+func writeText(td TemporaryData) <-chan TemporaryData {
+
+	retryChan := make(chan TemporaryData)
+	defer close(retryChan)
+
+	fileName := string(td.FileID) + ".txt"
+
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		retryChan <- td // здесь должен быть re try
+		return retryChan
+
+	}
+
+	file.WriteString(fmt.Sprintf("%s\n", td.Payload))
+	defer file.Close()
+	return retryChan
+}
+
+func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) {
 	go func() {
-		defer close(out)
 		defer wg.Wait()
 		for fileId, data := range fc.Cache {
 			fc.RemoveNotesBy(fileId)
@@ -125,26 +167,23 @@ func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) <-chan TemporaryData {
 			go func(fileId FileID, data []string) {
 				defer wg.Done()
 				for _, d := range data {
-					out <- TemporaryData{
-						FileID:  fileId,
-						Payload: d,
-					}
+					writeText(TemporaryData{FileID: fileId, Payload: d})
 				}
+
 			}(fileId, data)
 
 		}
 
 	}()
-	return out
 }
 
-type Writer interface {
-	Write(fc FileCache)
-}
+// type Writer interface {
+// 	Write(fc FileCache)
+// }
 
-type WriteToFile struct {
-}
+// type WriteToFile struct {
+// }
 
-func (wtf *WriteToFile) Write(wg *sync.WaitGroup, mu *sync.RWMutex, fc FileCache) {
+// func (wtf *WriteToFile) Write(wg *sync.WaitGroup, mu *sync.RWMutex, fc FileCache) {
 
-}
+// }
