@@ -33,8 +33,9 @@ type Generator struct {
 	Queue []Message
 }
 
-func (g *Generator) SendMessage(wg *sync.WaitGroup) <-chan Message {
-	out := make(chan Message)
+func (g *Generator) SendMessage() <-chan Message {
+	wg := &sync.WaitGroup{}
+	out := make(chan Message, 4)
 	go func() {
 		defer close(out)
 		defer wg.Wait()
@@ -42,8 +43,8 @@ func (g *Generator) SendMessage(wg *sync.WaitGroup) <-chan Message {
 			wg.Add(1)
 			go func(m Message) {
 				defer wg.Done()
-				time.Sleep(time.Second * 3)
 				out <- m
+				time.Sleep(time.Second * 1)
 			}(message)
 		}
 	}()

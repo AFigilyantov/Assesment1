@@ -92,6 +92,9 @@ import (
 
 func main() {
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // gracefull Shutdown
+	defer stop()
+
 	var whiteList = NewUsers()
 
 	whiteList.AddNewUser("111")
@@ -99,65 +102,35 @@ func main() {
 	whiteList.AddNewUser("333")
 	whiteList.AddNewUser("444")
 
-	wg := &sync.WaitGroup{}
-	mu := &sync.Mutex{}
-	g := Generator{}     // создается генератор
-	g.GetTestMessages()  // заполняем етстовые данные
-	fc := NewFileCache() // создаем cache сообщений
+	g := Generator{}                          // создается генератор
+	g.GetTestMessages()                       // заполняем етстовые данные
+	fc := NewFileCache()                      // создаем cache сообщений
+	fcr := New(time.Second*1, ParseFileCache) // file cahce reader
 
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
+	messageFromOutSide := g.SendMessage() // пишем в канал сообщения из генератора
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // gracefull Shutdown
-	defer stop()
+	fc.WriteDataTo(messageFromOutSide, whiteList)
 
-	messageFromOutSide := g.SendMessage(wg) // пишем в канал сообщения из генератора
-
-	fc.WriteDataTo(wg, mu, messageFromOutSide, whiteList)
-	go WriteDataFrom(ctx, wg, fc)
-
-	<-ctx.Done()
-	wg.Wait()
+	fcr.RunMainTask(ctx, fc)
 
 }
 
-func WriteDataFrom(ctx context.Context, wg *sync.WaitGroup, fc *FileCache) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			ParseFileCache(wg, fc)
-		case <-ctx.Done():
-			fmt.Println("INTERRUPTED")
-			return
-
-		}
-	}
-}
-
-func writeText(td TemporaryData) <-chan TemporaryData {
-
-	retryChan := make(chan TemporaryData)
-	defer close(retryChan)
+func writeText(td TemporaryData, fc *FileCache) {
 
 	fileName := string(td.FileID) + ".txt"
 
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 	if err != nil {
-		retryChan <- td // здесь должен быть re try
-		return retryChan
-
+		fc.AddNewNote(td.FileID, td.Payload)
 	}
 
 	file.WriteString(fmt.Sprintf("%s\n", td.Payload))
 	defer file.Close()
-	return retryChan
 }
 
-func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) {
+func ParseFileCache(fc *FileCache) {
+	wg := &sync.WaitGroup{}
 	go func() {
 		defer wg.Wait()
 		for fileId, data := range fc.Cache {
@@ -166,7 +139,7 @@ func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) {
 			go func(fileId FileID, data []string) {
 				defer wg.Done()
 				for _, d := range data {
-					writeText(TemporaryData{FileID: fileId, Payload: d}) // хздесь можно привернуть интерфейс
+					writeText(TemporaryData{FileID: fileId, Payload: d}, fc) // хздесь можно привернуть интерфейс
 				}
 
 			}(fileId, data)
@@ -175,14 +148,3 @@ func ParseFileCache(wg *sync.WaitGroup, fc *FileCache) {
 
 	}()
 }
-
-// type Writer interface {
-// 	Write(fc FileCache)
-// }
-
-// type WriteToFile struct {
-// }
-
-// func (wtf *WriteToFile) Write(wg *sync.WaitGroup, mu *sync.RWMutex, fc FileCache) {
-
-// }
