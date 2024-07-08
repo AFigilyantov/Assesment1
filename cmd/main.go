@@ -87,7 +87,7 @@ import (
 	"syscall"
 	"time"
 
-	. "asssement1.ru/entities"
+	en "asssement1.ru/entities"
 )
 
 func main() {
@@ -95,7 +95,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // gracefull Shutdown
 	defer stop()
 
-	var whiteList = NewUsers()
+	var whiteList = en.NewUsers()
 
 	whiteList.AddNewUser("111")
 	whiteList.AddNewUser("222")
@@ -104,7 +104,7 @@ func main() {
 
 	g := Generator{}                          // создается генератор
 	g.GetTestMessages()                       // заполняем етстовые данные
-	fc := NewFileCache()                      // создаем cache сообщений
+	fc := en.NewFileCache()                   // создаем cache сообщений
 	fcr := New(time.Second*1, ParseFileCache) // file cahce reader
 
 	messageFromOutSide := g.SendMessage() // пишем в канал сообщения из генератора
@@ -115,7 +115,7 @@ func main() {
 
 }
 
-func writeText(td TemporaryData, fc *FileCache) {
+func writeText(td en.TemporaryData, fc *en.FileCache) {
 
 	fileName := string(td.FileID) + ".txt"
 
@@ -129,17 +129,17 @@ func writeText(td TemporaryData, fc *FileCache) {
 	defer file.Close()
 }
 
-func ParseFileCache(fc *FileCache) {
+func ParseFileCache(fc *en.FileCache) {
 	wg := &sync.WaitGroup{}
 	go func() {
 		defer wg.Wait()
 		for fileId, data := range fc.Cache {
 			fc.RemoveNotesBy(fileId)
 			wg.Add(1)
-			go func(fileId FileID, data []string) {
+			go func(fileId en.FileID, data []string) {
 				defer wg.Done()
 				for _, d := range data {
-					writeText(TemporaryData{FileID: fileId, Payload: d}, fc) // хздесь можно привернуть интерфейс
+					writeText(en.TemporaryData{FileID: fileId, Payload: d}, fc) // хздесь можно привернуть интерфейс
 				}
 
 			}(fileId, data)

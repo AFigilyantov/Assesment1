@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	. "asssement1.ru/entities"
+	en "asssement1.ru/entities"
 )
 
-var stack = []Message{
+var stack = []en.Message{
 	{Token: "111", FileID: "file_01", Data: "Payload 1 From user with token 111"},
 	{Token: "111", FileID: "file_02", Data: "Payload 2 From user with token 111"},
 	{Token: "111", FileID: "file_03", Data: "Payload 3 From user with token 111"},
@@ -30,18 +30,18 @@ var stack = []Message{
 }
 
 type Generator struct {
-	Queue []Message
+	Queue []en.Message
 }
 
-func (g *Generator) SendMessage() <-chan Message {
+func (g *Generator) SendMessage() <-chan en.Message {
 	wg := &sync.WaitGroup{}
-	out := make(chan Message, 4)
+	out := make(chan en.Message, 4)
 	go func() {
 		defer close(out)
 		defer wg.Wait()
 		for _, message := range g.Queue {
 			wg.Add(1)
-			go func(m Message) {
+			go func(m en.Message) {
 				defer wg.Done()
 				out <- m
 				time.Sleep(time.Second * 1)
@@ -51,7 +51,7 @@ func (g *Generator) SendMessage() <-chan Message {
 	return out
 }
 
-func (g *Generator) AddMessage(m Message) {
+func (g *Generator) AddMessage(m en.Message) {
 	g.Queue = append(g.Queue, m)
 }
 
