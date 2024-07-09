@@ -79,20 +79,80 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"runtime/trace"
 	"sync"
+	"syscall"
+	"time"
+
+	en "asssement1.ru/entities"
 )
 
 func main() {
 
-	wg := &sync.WaitGroup{}
-	g := Generator{}
-	g.GetTestMessages()
-	messageFromOutSide := g.SendMessage(wg) // DDos is worked by chan
-	for mes := range messageFromOutSide {
+	t, _ := os.Create("trace.out")
 
-		fmt.Println(mes.Data)
+	trace.Start(t)
+	defer trace.Stop()
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // gracefull Shutdown
+	defer stop()
+
+	var whiteList = en.NewUsers() //создаем список пользователей
+
+	whiteList.AddNewUser("111") // добавляем пользователей
+	whiteList.AddNewUser("222")
+	whiteList.AddNewUser("333")
+	whiteList.AddNewUser("444")
+
+	g := Generator{}                          // создается генератор
+	g.GetTestMessages()                       // заполняем етстовые данные
+	fc := en.NewFileCache()                   // создаем cache сообщений
+	fcr := New(time.Second*1, ParseFileCache) // file cahce reader создаем демона читающего КЭШ и пишущего данные в файлы
+
+	messageFromOutSide := g.SendMessage() // пишем в канал сообщения из генератора
+
+	fc.WriteDataTo(messageFromOutSide, whiteList) // пишем данные из канала в КЭШ с предварительной проверкой
+
+	fcr.RunMainTask(ctx, fc) // запускаем демона читающего КЭШ и пишущего данные в файлы
+
+}
+
+// функция записи в файл
+func writeText(td en.TemporaryData, fc *en.FileCache) {
+
+	fileName := string(td.FileID) + ".txt"
+
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		fc.AddNewNote(td.FileID, td.Payload) // если запись не удалась данные записываются обпратно в КЭШ
 	}
 
+	file.WriteString(fmt.Sprintf("%s\n", td.Payload))
+	defer file.Close()
+}
+
+// чтение из КЭШ
+func ParseFileCache(fc *en.FileCache) {
+	wg := &sync.WaitGroup{}
+	go func() {
+		defer wg.Wait()
+		for fileId, data := range fc.Cache { // читаем в цикле КЭШ
+			fc.RemoveNotesBy(fileId)                   // всее прочитанное удаляем из КЭШ...
+			wg.Add(1)                                  // подумать над транзакционной реализацией
+			go func(fileId en.FileID, data []string) { // конкуретная запись в файлы
+				defer wg.Done()
+				for _, d := range data {
+					writeText(en.TemporaryData{FileID: fileId, Payload: d}, fc) // здесь можно привернуть интерфейс
+				}
+
+			}(fileId, data)
+
+		}
+
+	}()
 }
